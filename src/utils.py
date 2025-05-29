@@ -1,7 +1,7 @@
 import glob
 import os
 import re
-from typing import Any, Optional
+from typing import Literal
 
 import nltk
 import pandas as pd
@@ -21,20 +21,22 @@ except LookupError:
 
 
 def load_from_directory(
-    directory_path: str, file_pattern: str = "*.txt"
-) -> list[tuple[str, str]]:
+    directory_path: str,
+    return_mode: Literal["doc", "sep"] = "doc",
+) -> list[tuple[str, str]] | tuple[list[str], list[str]]:
     """
     Load text files from a directory.
 
     Args:
         directory_path: Path to the directory containing text files
-        file_pattern: Pattern for file selection
+        return_mode: Mode to return the data in
 
     Returns:
-        List of tuples (id, content)
+        If return_mode is "doc", a list of (id, content) tuples.
+        If return_mode is "sep", a tuple of two lists - one of ids and one of contents.
     """
     documents = []
-    file_paths = glob.glob(os.path.join(directory_path, file_pattern))
+    file_paths = glob.glob(os.path.join(directory_path, "*"))
     file_paths.sort(
         key=lambda x: [
             int(text) if text.isdigit() else text.lower()
@@ -44,36 +46,50 @@ def load_from_directory(
 
     for file_path in file_paths:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
             id = os.path.splitext(os.path.basename(file_path))[0]
             documents.append((id, content))
         except Exception as e:
             print(f"Error loading {file_path}: {e}")
 
-    return documents
+    if return_mode == "doc":
+        return documents
+    else:
+        ids, contents = zip(*documents, strict=False)
+        return list(ids), list(contents)
 
 
 def load_csv_data(
-    file_path: str, text_column: str, id_column: Optional[str] = None
-) -> list[tuple[Any, str]]:
+    file_path: str,
+    return_mode: Literal["doc", "sep"] = "doc",
+    sep: str | None = None,
+    columns: list[str] | None = None,
+    header: Literal["infer"] | None = None,
+) -> list[tuple] | tuple[list, ...]:
     """
-    Load document data from a CSV file.
+    Load data from a CSV file.
 
     Args:
         file_path: Path to the CSV file
-        text_column: Name of the column containing document text
-        id_column: Name of the column containing document IDs (or None to use index)
-
-    Returns:
-        List of tuples (id, content)
+        return_mode: Mode to return the data in
+        sep: Separator for the CSV file
+        columns: List of column names to load
+        header: Infer the column names or not
     """
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, sep=sep or "\t", header=header)
 
-    if id_column is None:
-        return list(zip(df.index.tolist(), df[text_column].tolist()))
+    df.columns = df.columns.astype(str)
+    if columns is not None:
+        df = df[columns]
+
+    # Convert all columns to strings
+    df = df.map(str)
+
+    if return_mode == "doc":
+        return [tuple(df.T[col]) for col in df.T.columns]
     else:
-        return list(zip(df[id_column].tolist(), df[text_column].tolist()))
+        return tuple(df[col].tolist() for col in df.columns)
 
 
 def preprocess_text(

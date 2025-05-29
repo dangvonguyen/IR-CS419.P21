@@ -97,7 +97,9 @@ class LSAModel:
 
         self.is_fitted = True
 
-    def search(self, query: str, top_k: int | None = None) -> list[dict]:
+    def search(
+        self, query: str, top_k: int | None = None, threshold: float = 0.05
+    ) -> list[dict]:
         """
         Search for relevant documents.
         """
@@ -114,13 +116,14 @@ class LSAModel:
         similarities = []
         for i, doc_vector in enumerate(self.document_vectors):
             similarity = 1 - cosine(query_semantic, doc_vector)
-            similarities.append(
-                {
-                    "id": self.doc_ids[i],
-                    "score": float(similarity),
-                    "content": self.documents[i],
-                }
-            )
+            if similarity >= threshold:
+                similarities.append(
+                    {
+                        "id": self.doc_ids[i],
+                        "score": float(similarity),
+                        "content": self.documents[i],
+                    }
+                )
 
         similarities.sort(key=lambda x: x["score"], reverse=True)
         return similarities[:top_k]

@@ -40,9 +40,9 @@ class CombinedModel:
         self,
         query: str,
         boolean_query: str | None = None,
-        mode: Literal["lsa_first", "boolean_first"] = "boolean_first",
+        search_mode: Literal["lsa_first", "boolean_first"] = "boolean_first",
         top_k: int | None = None,
-        lsa_threshold: float = 0.05,
+        threshold: float = 0.05,
     ) -> list[dict]:
         """
         Search for documents matching the query and optional Boolean query.
@@ -50,12 +50,12 @@ class CombinedModel:
         if not self.is_fitted:
             raise ValueError("Model must be fitted first")
 
-        if mode == "lsa_first":
-            return self._lsa_first(query, boolean_query, top_k, lsa_threshold)
-        elif mode == "boolean_first":
-            return self._boolean_first(query, boolean_query, top_k, lsa_threshold)
+        if search_mode == "lsa_first":
+            return self._lsa_first(query, boolean_query, top_k, threshold)
+        elif search_mode == "boolean_first":
+            return self._boolean_first(query, boolean_query, top_k, threshold)
         else:
-            raise ValueError(f"Unknown mode: {mode}")
+            raise ValueError(f"Unknown mode: {search_mode}")
 
     def _lsa_first(
         self, query: str, boolean_query: str | None, top_k: int | None, threshold: float
@@ -64,8 +64,8 @@ class CombinedModel:
         Apply LSA search first, get top resutls, then filter with Boolean query.
         """
         # Get LSA results
-        lsa_results = self.lsa_model.search(query, top_k=top_k)
-        lsa_results = [r for r in lsa_results if r["score"] >= threshold]
+        lsa_results = self.lsa_model.search(query, top_k, threshold)
+        lsa_results = [r for r in lsa_results if r["score"]]
 
         if not boolean_query or not boolean_query.strip():
             for result in lsa_results:

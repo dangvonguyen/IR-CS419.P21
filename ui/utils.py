@@ -9,6 +9,7 @@ def load_model(
     n_components: int | None = None,
     min_df: int | None = None,
     max_df: float | None = None,
+    random_state: int | None = None,
     preprocess_config: dict[str, Any] | None = None,
     boolean_config: dict[str, Any] | None = None,
 ) -> BooleanModel | LSAModel | CombinedModel:
@@ -21,6 +22,7 @@ def load_model(
             max_df=max_df,
             min_df=min_df,
             preprocess_config=preprocess_config,
+            random_state=random_state,
         ),
     }
     if model_type != "Combined":
@@ -31,12 +33,12 @@ def load_model(
 
 def load_documents(
     source_type: Literal["dir", "csv"],
-    file_path: str,
-    file_pattern: str | None = None,
-    text_column: str | None = None,
-    id_column: str | None = None,
+    path: str,
+    sep: str | None = None,
+    columns: list[str] | None = None,
+    header: Literal["infer"] | None = None,
 ) -> list[tuple[str, str]]:
     if source_type == "dir":
-        return load_from_directory(file_path, file_pattern)
+        return load_from_directory(path)
     else:
-        return load_csv_data(file_path, text_column, id_column)
+        return load_csv_data(path, sep=sep, columns=columns, header=header)

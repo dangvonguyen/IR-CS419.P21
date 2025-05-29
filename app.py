@@ -57,17 +57,23 @@ def main() -> None:
 
             # Search interface based on model type
             search_params = {}
-            if st.session_state.model_type == "LSA":
-                search_params = {
-                    "top_k": st.slider("Number of results", 1, 50, 10),
-                }
-            elif st.session_state.model_type == "Combined":
-                search_params = {
-                    "boolean_query": st.text_input("Enter Boolean query (optional)"),
-                    "mode": st.radio("Search mode", ["boolean_first", "lsa_first"]),
-                    "top_k": st.slider("Number of results", 1, 50, 10),
-                    "lsa_threshold": st.slider("LSA threshold", 0.0, 1.0, 0.05),
-                }
+            if st.session_state.model_type != "Boolean":
+                if st.session_state.model_type == "Combined":
+                    search_params["boolean_query"] = st.text_input("Enter Boolean query (optional)")
+                    search_params["search_mode"] = st.radio("Search mode", ["boolean_first", "lsa_first"])
+
+                search_params["threshold"] = st.slider("Score threshold", 0.0, 1.0, 0.05)
+
+                use_top_k = st.checkbox("Use top-k results", value=True)
+                top_k = st.number_input(
+                    "Number of results",
+                    min_value=1,
+                    max_value=len(st.session_state.documents),
+                    value=10,
+                    disabled=not use_top_k,
+                )
+                if use_top_k:
+                    search_params["top_k"] = top_k
 
             if st.button("Search") and query:
                 with st.spinner("Searching..."):

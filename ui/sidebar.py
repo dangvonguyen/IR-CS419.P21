@@ -3,7 +3,7 @@ from typing import Any
 import streamlit as st
 
 
-def load_sidebar() -> tuple[dict[str, Any], dict[str, Any]]:
+def load_sidebar() -> tuple[dict[str, Any], dict[str, Any], bool]:
     # Sidebar for data loading and model configuration
     with st.sidebar:
         st.header("Data Source")
@@ -12,12 +12,12 @@ def load_sidebar() -> tuple[dict[str, Any], dict[str, Any]]:
         # Data parameters
         data_params = {"source_type": source_type}
         if source_type == "dir":
-            data_params["file_path"] = st.text_input("Directory path", value="data/Cranfield")  # fmt: skip
-            data_params["file_pattern"] = st.text_input("File pattern", value="*.txt")
+            data_params["path"] = st.text_input("Directory path", value="data/Cranfield")  # fmt: skip
         else:
-            data_params["file_path"] = st.text_input("CSV file path")
-            data_params["text_column"] = st.text_input("Text column name")
-            data_params["id_column"] = st.text_input("ID column name (optional)")
+            data_params["path"] = st.text_input("CSV file path")
+            data_params["sep"] = st.text_input("Separator", value=r"\t")
+            data_params["columns"] = st.text_input("Columns")
+            data_params["header"] = st.selectbox("Header", ["infer", None])
 
         st.header("Model Configuration")
         model_type = st.selectbox("Select model", ["LSA", "Boolean", "Combined"])
@@ -29,6 +29,14 @@ def load_sidebar() -> tuple[dict[str, Any], dict[str, Any]]:
             model_params["n_components"] = st.slider("Number of components", 10, 500, 100)  # fmt: skip
             model_params["min_df"] = st.slider("Minimum document frequency", 1, 10, 1)
             model_params["max_df"] = st.slider("Maximum document frequency (%)", 50, 100, 90) / 100  # fmt: skip
+
+            col1, col2 = st.columns(2, vertical_alignment="bottom")
+            with col1:
+                use_random = st.checkbox("Random state", value=True)
+            with col2:
+                random_state = st.number_input("Random state", value=0, disabled=not use_random)  # fmt: skip
+                if use_random:
+                    model_params["random_state"] = random_state
 
         # Preprocessing parameters
         st.subheader("Preprocessing")
