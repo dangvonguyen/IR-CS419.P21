@@ -13,10 +13,6 @@ st.set_page_config(
 def main() -> None:
     st.title("🔍 Text Retrieval System")
 
-    data_params, model_params, load_button = load_sidebar()
-    source_type = data_params.pop("source_type")
-    model_type = model_params.pop("model_type")
-
     # Initialize session state variables
     if "documents" not in st.session_state:
         st.session_state.documents = None
@@ -27,6 +23,11 @@ def main() -> None:
 
     # Main content area
     tab_search, tab_docs = st.tabs(["Search", "Documents"])
+
+    # Sidebar
+    data_params, model_params, load_button = load_sidebar()
+    source_type = data_params.pop("source_type")
+    model_type = model_params.pop("model_type")
 
     # Load data and initialize model
     if load_button:
@@ -52,14 +53,16 @@ def main() -> None:
     with tab_search:
         if st.session_state.model is not None:
             st.header("Search Documents")
+            query = st.text_input("Enter search query")
 
             # Search interface based on model type
-            query = st.text_input("Enter search query")
-            params = {}
+            search_params = {}
             if st.session_state.model_type == "LSA":
-                params = {"top_k": st.slider("Number of results", 1, 50, 10)}
+                search_params = {
+                    "top_k": st.slider("Number of results", 1, 50, 10),
+                }
             elif st.session_state.model_type == "Combined":
-                params = {
+                search_params = {
                     "boolean_query": st.text_input("Enter Boolean query (optional)"),
                     "mode": st.radio("Search mode", ["boolean_first", "lsa_first"]),
                     "top_k": st.slider("Number of results", 1, 50, 10),
@@ -68,13 +71,15 @@ def main() -> None:
 
             if st.button("Search") and query:
                 with st.spinner("Searching..."):
-                    results = st.session_state.model.search(query, **params)
+                    results = st.session_state.model.search(query, **search_params)
 
                     if results:
                         st.subheader(f"Found {len(results)} results")
                         for i, result in enumerate(results):
                             with st.expander(
-                                f"Result {i + 1}: \nDocument ID: {result['id']} \n(Score: {result['score']:.4f})"
+                                f"Result {i + 1} - "
+                                f"Document ID: {result['id']} "
+                                f"(Score: {result['score']:.4f})"
                             ):
                                 st.text(result["content"])
                     else:
