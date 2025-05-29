@@ -16,9 +16,9 @@ class LSAModel:
         n_components: int = 100,
         max_df: float | int = 1.0,
         min_df: float | int = 1,
-        preprocessing_config: dict[str, Any] | None = None,
+        preprocess_config: dict[str, Any] | None = None,
         random_state: int | None = None,
-    ):
+    ) -> None:
         """
         Initialize the LSA model.
 
@@ -45,11 +45,11 @@ class LSAModel:
         self.n_components = n_components
         self.max_df = max_df
         self.min_df = min_df
-        self.preprocessing_config = {**default_config, **(preprocessing_config or {})}
+        self.preprocess_config = {**default_config, **(preprocess_config or {})}
         self.random_state = random_state
 
         self._vectorizer = TfidfVectorizer(
-            preprocessor=lambda x: preprocess_text(x, **self.preprocessing_config),
+            preprocessor=lambda x: preprocess_text(x, **self.preprocess_config),
             lowercase=False,
             stop_words=None,
             max_df=max_df,

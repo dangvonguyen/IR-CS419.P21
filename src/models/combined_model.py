@@ -1,7 +1,7 @@
 from typing import Literal
 
-from src.models.lsa_model import LSAModel
 from src.models.boolean_model import BooleanModel
+from src.models.lsa_model import LSAModel
 
 
 class CombinedModel:

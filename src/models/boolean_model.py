@@ -8,7 +8,7 @@ from src.utils import preprocess_text
 class BooleanModel:
     """A Boolean Model implementation for information retrieval."""
 
-    def __init__(self, preprocessing_config: dict[str, Any] | None = None) -> None:
+    def __init__(self, preprocess_config: dict[str, Any] | None = None) -> None:
         default_config = {
             "lowercase": True,
             "remove_urls": True,
@@ -22,7 +22,7 @@ class BooleanModel:
             "custom_stopwords": None,
         }
 
-        self.preprocessing_config = {**default_config, **(preprocessing_config or {})}
+        self.preprocessing_config = {**default_config, **(preprocess_config or {})}
         self.preprocessing_config["return_tokens"] = True
 
         self.documents: list[str] = []
