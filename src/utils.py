@@ -77,7 +77,7 @@ def load_csv_data(
         columns: List of column names to load
         header: Infer the column names or not
     """
-    df = pd.read_csv(file_path, sep=sep or "\t", header=header)
+    df = pd.read_csv(file_path, sep=sep or "\t", header=header, engine="python")
 
     df.columns = df.columns.astype(str)
     if columns is not None:

@@ -115,7 +115,11 @@ class LSAModel:
         # Compute cosine similarity between query and all documents
         similarities = []
         for i, doc_vector in enumerate(self.document_vectors):
-            similarity = 1 - cosine(query_semantic, doc_vector)
+            if np.all(query_semantic == 0) or np.all(doc_vector == 0):
+                similarity = 0.0
+            else:
+                similarity = 1 - cosine(query_semantic, doc_vector)
+
             if similarity >= threshold:
                 similarities.append(
                     {
@@ -145,7 +149,11 @@ class LSAModel:
         similarities = []
         for i, term_vector in enumerate(self.term_vectors):
             if i != term_index:
-                similarity = 1 - cosine(target_vector, term_vector)
+                if np.all(target_vector == 0) or np.all(term_vector == 0):
+                    similarity = 0.0
+                else:
+                    similarity = 1 - cosine(target_vector, term_vector)
+
                 similarities.append({"term": self.vocabulary[i], "score": similarity})
 
         similarities.sort(key=lambda x: x["score"], reverse=True)
