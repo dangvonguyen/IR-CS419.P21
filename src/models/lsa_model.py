@@ -150,3 +150,34 @@ class LSAModel:
 
         similarities.sort(key=lambda x: x["score"], reverse=True)
         return similarities[:top_k]
+
+    def get_top_terms(
+        self, component_idx: int, top_k: int = 10
+    ) -> tuple[list[str], list[float]]:
+        """
+        Get the top terms for a specific component/topic.
+
+        Args:
+            component_idx: Index of the component to analyze
+            top_k: Number of top terms to return
+
+        Returns:
+            Tuple containing (terms, weights)
+        """
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted first.")
+
+        if component_idx >= self.n_components:
+            raise ValueError(f"Component index {component_idx} out of range")
+
+        # Get the term weights for the specified component
+        term_weights = self.term_vectors[:, component_idx]
+
+        # Get indices of top terms
+        top_indices = np.argsort(np.abs(term_weights))[::-1][:top_k]
+
+        # Get the actual terms and their weights
+        top_terms = [self.vocabulary[i] for i in top_indices]
+        top_weights = [term_weights[i] for i in top_indices]
+
+        return top_terms, top_weights

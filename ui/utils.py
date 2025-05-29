@@ -1,5 +1,6 @@
 from typing import Any, Literal
 
+from src.evaluate import comprehensive_evaluation
 from src.models import BooleanModel, CombinedModel, LSAModel
 from src.utils import load_csv_data, load_from_directory
 
@@ -42,3 +43,25 @@ def load_documents(
         return load_from_directory(path)
     else:
         return load_csv_data(path, sep=sep, columns=columns, header=header)
+
+
+def compute_metrics(
+    model: BooleanModel | LSAModel | CombinedModel,
+    search_params: dict[str, Any],
+    query_path: str = "data/TEST/query.txt",
+    res_path: str = "data/TEST/RES",
+) -> dict[str, float]:
+    queries = load_csv_data(query_path)
+
+    query_results = {}
+    for query_id, query in queries:
+        retrieved_docs = [doc["id"] for doc in model.search(query, **search_params)]
+        relevant_docs, = load_csv_data(
+            f"{res_path}/{query_id}.txt",
+            return_mode="sep",
+            sep=r"[ \t]+",
+            columns=["1"],
+        )
+        query_results[query_id] = (retrieved_docs, relevant_docs)
+
+    return comprehensive_evaluation(query_results)

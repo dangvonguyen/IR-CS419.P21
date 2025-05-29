@@ -1,0 +1,33 @@
+[lint]
+preview = true
+select = [
+    "F", # pyflakes
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "I", # isort
+    "N", # pep8-naming
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "Q", # flake8-quote
+    "C4", # flake8-comprehensions
+    "ANN", # flake8-annotations
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+]
+
+ignore = [
+    "UP045", # non-pep604-annotation-union 
+    "E401", # module-import-not-at-top-of-file
+    "ANN401", # any-type
+    "ARG002", # unused-method-argument
+    "SIM103", # needless-bool
+    "SIM105", # suppressible-exception
+    "SIM108", # if-else-block-instead-of-if-exp
+    "FURB101", # non-pep604-annotation-union 
+    "FURB113", # repeated-append
+]
+
+[lint.pycodestyle]
+ignore-overlong-task-comments = true
+max-doc-length = 120
+max-line-length = 120
