@@ -2,24 +2,36 @@ from typing import Literal
 
 from src.models.boolean_model import BooleanModel
 from src.models.lsa_model import LSAModel
+from src.models.vsm_model import VSMModel
 
 
 class CombinedModel:
-    """Combined model that integrates LSA and Boolean model."""
+    """Combined model that integrates VSM/LSA and Boolean model."""
 
     def __init__(
         self,
-        lsa_model: LSAModel | None = None,
+        vector_model_type: Literal["LSA", "VSM"] = "LSA",
+        vector_model: LSAModel | VSMModel | None = None,
         boolean_model: BooleanModel | None = None,
     ) -> None:
         """
         Initialize the combined model.
 
         Args:
-            lsa_model: Initialized LSA model (or None to create a new one)
+            vector_model_type: Which vector model to use ("LSA" or "VSM")
+            vector_model: Initialized vector model (or None to create a new one)
             boolean_model: Initialized Boolean model (or None to create a new one)
         """
-        self.lsa_model = lsa_model if lsa_model else LSAModel()
+        self.vector_model_type = vector_model_type
+
+        if vector_model:
+            self.vector_model = vector_model
+        else:
+            if vector_model_type == "LSA":
+                self.vector_model = LSAModel()
+            else:  # VSM
+                self.vector_model = VSMModel()
+
         self.boolean_model = boolean_model if boolean_model else BooleanModel()
 
         self.documents = None
@@ -31,7 +43,7 @@ class CombinedModel:
         Fit both models to the document collection.
         """
         self.documents = documents
-        self.lsa_model.fit(documents)
+        self.vector_model.fit(documents)
         self.boolean_model.fit(documents)
 
         self.is_fitted = True
@@ -40,7 +52,7 @@ class CombinedModel:
         self,
         query: str,
         boolean_query: str | None = None,
-        search_mode: Literal["lsa_first", "boolean_first"] = "boolean_first",
+        search_mode: Literal["vector_first", "boolean_first"] = "boolean_first",
         top_k: int | None = None,
         threshold: float = 0.05,
     ) -> list[dict]:
@@ -50,37 +62,37 @@ class CombinedModel:
         if not self.is_fitted:
             raise ValueError("Model must be fitted first")
 
-        if search_mode == "lsa_first":
-            return self._lsa_first(query, boolean_query, top_k, threshold)
+        if search_mode == "vector_first":
+            return self._vector_first(query, boolean_query, top_k, threshold)
         elif search_mode == "boolean_first":
             return self._boolean_first(query, boolean_query, top_k, threshold)
         else:
             raise ValueError(f"Unknown mode: {search_mode}")
 
-    def _lsa_first(
+    def _vector_first(
         self, query: str, boolean_query: str | None, top_k: int | None, threshold: float
     ) -> list[dict]:
         """
-        Apply LSA search first, get top resutls, then filter with Boolean query.
+        Apply vector model search first, get top results, then filter with Boolean query.
         """
-        # Get LSA results
-        lsa_results = self.lsa_model.search(query, top_k, threshold)
-        lsa_results = [r for r in lsa_results if r["score"]]
+        # Get vector model results
+        vector_results = self.vector_model.search(query, top_k, threshold)
+        vector_results = [r for r in vector_results if r["score"]]
 
         if not boolean_query or not boolean_query.strip():
-            for result in lsa_results:
-                result["mode"] = "lsa_first"
+            for result in vector_results:
+                result["mode"] = "vector_first"
                 result["boolean_match"] = False
-            return lsa_results
+            return vector_results
 
         # Get Boolean results for filtering
         boolean_results = self.boolean_model.search(boolean_query)
         boolean_ids = {r["id"] for r in boolean_results}
 
         filtered_results = []
-        for result in lsa_results:
+        for result in vector_results:
             if result["id"] in boolean_ids:
-                result["mode"] = "lsa_first"
+                result["mode"] = "vector_first"
                 result["boolean_match"] = True
                 filtered_results.append(result)
 
@@ -90,7 +102,7 @@ class CombinedModel:
         self, query: str, boolean_query: str | None, top_k: int | None, threshold: float
     ) -> list[dict]:
         """
-        Apply Boolean search first, then rank with LSA.
+        Apply Boolean search first, then rank with vector model.
         """
         # Get Boolean results
         boolean_results = self.boolean_model.search(boolean_query)
@@ -98,28 +110,28 @@ class CombinedModel:
         if not boolean_results:
             return []
 
-        # Get LSA scores for all documents
-        lsa_results = self.lsa_model.search(query, top_k=None)
-        lsa_scores = {r["id"]: r["score"] for r in lsa_results}
+        # Get vector model scores for all documents
+        vector_results = self.vector_model.search(query, top_k=None)
+        vector_scores = {r["id"]: r["score"] for r in vector_results}
 
-        # Enhanc results with LSA scores
+        # Enhance results with vector model scores
         enhanced_results = []
         for result in boolean_results:
             doc_id = result["id"]
-            lsa_score = lsa_scores.get(doc_id, 0.0)
-            if lsa_score < threshold:
+            vector_score = vector_scores.get(doc_id, 0.0)
+            if vector_score < threshold:
                 continue
 
             enhanced_results.append(
                 {
                     "id": doc_id,
-                    "score": lsa_score,
+                    "score": vector_score,
                     "content": result["content"],
                     "mode": "boolean_first",
                     "boolean_match": True,
                 }
             )
 
-        # Sort by LSA score
+        # Sort by vector model score
         enhanced_results.sort(key=lambda x: x["score"], reverse=True)
         return enhanced_results[:top_k]

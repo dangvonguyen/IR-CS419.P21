@@ -1,22 +1,28 @@
 from typing import Any, Literal
 
 from src.evaluate import comprehensive_evaluation
-from src.models import BooleanModel, CombinedModel, LSAModel
+from src.models import BooleanModel, CombinedModel, LSAModel, VSMModel
 from src.utils import load_csv_data, load_from_directory
 
 
 def load_model(
-    model_type: Literal["LSA", "Boolean", "Combined"],
+    model_type: Literal["LSA", "VSM", "Boolean", "Combined"],
     n_components: int | None = None,
     min_df: int | None = None,
     max_df: float | None = None,
     random_state: int | None = None,
     preprocess_config: dict[str, Any] | None = None,
     boolean_config: dict[str, Any] | None = None,
-) -> BooleanModel | LSAModel | CombinedModel:
+    vector_model_type: Literal["lsa", "vsm"] | None = None,
+) -> BooleanModel | LSAModel | VSMModel | CombinedModel:
     factories = {
         "Boolean": lambda: BooleanModel(
             preprocess_config=boolean_config or preprocess_config
+        ),
+        "VSM": lambda: VSMModel(
+            max_df=max_df,
+            min_df=min_df,
+            preprocess_config=preprocess_config,
         ),
         "LSA": lambda: LSAModel(
             n_components=n_components,
@@ -29,7 +35,12 @@ def load_model(
     if model_type != "Combined":
         return factories[model_type]()
     else:
-        return CombinedModel(factories["LSA"](), factories["Boolean"]())
+        vector_model = factories["LSA"]() if vector_model_type == "LSA" else factories["VSM"]()  # fmt: skip
+        return CombinedModel(
+            vector_model_type=vector_model_type,
+            vector_model=vector_model,
+            boolean_model=factories["Boolean"](),
+        )
 
 
 def load_documents(
@@ -56,7 +67,7 @@ def compute_metrics(
     query_results = {}
     for query_id, query in queries:
         retrieved_docs = [doc["id"] for doc in model.search(query, **search_params)]
-        relevant_docs, = load_csv_data(
+        (relevant_docs,) = load_csv_data(
             f"{res_path}/{query_id}.txt",
             return_mode="sep",
             sep=r"[ \t]+",

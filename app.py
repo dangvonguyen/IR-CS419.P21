@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src.models import BooleanModel, LSAModel
+from src.models import BooleanModel, LSAModel, VSMModel
 from ui.sidebar import load_sidebar
 from ui.utils import compute_metrics, load_documents, load_model
 
@@ -73,6 +73,43 @@ def plot_top_terms(model: LSAModel) -> None:
     st.plotly_chart(weight_fig)
 
 
+def plot_vsm_analysis(model: VSMModel) -> None:
+    st.subheader("Top TF-IDF Terms per Document")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_doc_id = st.selectbox(
+            "Select a document",
+            options=model.doc_ids,
+            format_func=lambda x: f"Document {x}",
+        )
+    with col2:
+        num_terms = st.number_input("Number of terms", 1, len(model.vocabulary), 20)
+
+    top_terms = model.get_top_terms_for_document(selected_doc_id, num_terms)
+
+    # Create dataframe for visualization
+    df = pd.DataFrame(top_terms, columns=["Term", "TF-IDF Weight"])
+
+    # Display table
+    st.dataframe(df)
+
+    # Create visualization
+    fig = px.bar(
+        df,
+        x="Term",
+        y="TF-IDF Weight",
+        title=f"Top {len(df)} Terms by TF-IDF Weight in Document {selected_doc_id}",
+    )
+    st.plotly_chart(fig)
+
+    # Show document content
+    doc_index = model.doc_ids.index(selected_doc_id)
+    content = model.documents[doc_index]
+    with st.expander("Document Content"):
+        st.text(content)
+
+
 def main() -> None:
     st.title("🔍 Text Retrieval System")
 
@@ -123,7 +160,7 @@ def main() -> None:
             if st.session_state.model_type != "Boolean":
                 if st.session_state.model_type == "Combined":
                     search_params["boolean_query"] = st.text_input("Enter Boolean query (optional)")  # fmt: skip
-                    search_params["search_mode"] = st.radio("Search mode", ["boolean_first", "lsa_first"])  # fmt: skip
+                    search_params["search_mode"] = st.radio("Search mode", ["boolean_first", "vector_first"])  # fmt: skip
 
                 search_params["threshold"] = st.slider("Score threshold", 0.0, 1.0, 0.05)  # fmt: skip
 
@@ -170,7 +207,7 @@ def main() -> None:
                 if st.session_state.model_type != "Combined":
                     st.metric("vocab size", len(model.vocabulary))
                 else:
-                    st.metric("LSA vocab size", len(model.lsa_model.vocabulary))
+                    st.metric("Vector vocab size", len(model.vector_model.vocabulary))
                     st.metric("Boolean vocab size", len(model.boolean_model.vocabulary))
 
             st.divider()
@@ -192,12 +229,19 @@ def main() -> None:
 
             if st.session_state.model_type == "LSA":
                 plot_top_terms(model)
+            elif st.session_state.model_type == "VSM":
+                plot_vsm_analysis(model)
             elif st.session_state.model_type == "Boolean":
                 plot_term_frequency(model)
             else:
-                tab_lsa, tab_boolean = st.tabs(["LSA Component", "Boolean Component"])
-                with tab_lsa:
-                    plot_top_terms(model.lsa_model)
+                tab_vector, tab_boolean = st.tabs(
+                    ["Vector Component", "Boolean Component"]
+                )
+                with tab_vector:
+                    if model.vector_model_type == "LSA":
+                        plot_top_terms(model.vector_model)
+                    else:  # VSM
+                        plot_vsm_analysis(model.vector_model)
                 with tab_boolean:
                     plot_term_frequency(model.boolean_model)
         else:
