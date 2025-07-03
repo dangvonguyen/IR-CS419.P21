@@ -29,5 +29,5 @@ ignore = [
 
 [lint.pycodestyle]
 ignore-overlong-task-comments = true
-max-doc-length = 120
-max-line-length = 120
+max-doc-length = 150
+max-line-length = 150
